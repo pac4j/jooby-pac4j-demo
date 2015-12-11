@@ -1,0 +1,24 @@
+{{#partial "main"}}
+<ul>
+  <li><a href="{{contextPath}}/profile">view profile (require authentication)</a></li>
+  {{#if profile}}<li><a href="{{contextPath}}/rest-jwt?token={{token}}">JWT Token</a></li>{{/if}}
+</ul>
+{{#unless loggedIn}}
+<h2>Authenticate with</h2>
+<ul>
+  <li><a href="{{contextPath}}/facebook">Facebook (use a real account)</a></li>
+  <li><a href="{{contextPath}}/twitter">Twitter (use a real account)</a></li>
+  <li><a href="{{contextPath}}/form">Form (use login = pwd)</a></li>
+  <li><a href="{{contextPath}}/basic">Basic Auth (use login = pwd)</a></li>
+  <li><a href="{{contextPath}}/cas">CAS (use login = pwd)</a></li>
+  <li><a href="{{contextPath}}/saml2">SAML (use a real account)</a></li>
+  <li><a href="{{contextPath}}/oidc">OpenID Connect (use a real account)</a></li>
+  <li><a href="{{contextPath}}/strava">Strava (use a real account)</a></li>
+</ul>
+{{/unless}}
+<h2>Protected URLs</h2>
+<ul>
+  <li><a href="{{contextPath}}/form/admin">form protected with custom authorizer (= must be a HttpProfile where the username starts with "jle")</a></li>
+</ul>
+{{/partial}}
+{{> html5}}
