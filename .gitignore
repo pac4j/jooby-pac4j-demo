@@ -53,3 +53,5 @@ dependency-reduced-pom.xml
 local.conf
 
 pom.xml.versionsBackup
+.idea
+*.iml

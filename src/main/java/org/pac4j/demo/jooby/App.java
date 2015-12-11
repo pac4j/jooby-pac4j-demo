@@ -1,13 +1,9 @@
-package org.leleuj;
+package org.pac4j.demo.jooby;
 
 import java.io.File;
 import java.util.Optional;
 
-import org.jooby.Err;
-import org.jooby.Jooby;
-import org.jooby.Results;
-import org.jooby.Route;
-import org.jooby.Status;
+import org.jooby.*;
 import org.jooby.hbs.Hbs;
 import org.jooby.pac4j.Auth;
 import org.jooby.pac4j.AuthStore;
@@ -18,6 +14,7 @@ import org.pac4j.http.client.direct.ParameterClient;
 import org.pac4j.http.credentials.authenticator.test.SimpleTestUsernamePasswordAuthenticator;
 import org.pac4j.http.profile.HttpProfile;
 import org.pac4j.jwt.credentials.authenticator.JwtAuthenticator;
+import org.pac4j.jwt.profile.JwtGenerator;
 import org.pac4j.oauth.client.FacebookClient;
 import org.pac4j.oauth.client.StravaClient;
 import org.pac4j.oauth.client.TwitterClient;
@@ -40,6 +37,15 @@ public class App extends Jooby {
     /** Home page. */
     get("/", req -> {
       return Results.html("index");
+    });
+
+    // generate token
+    get("/generate-token", req -> {
+      UserProfile profile = getUserProfile(req);
+      // TODO: how can I access the config here?
+      JwtGenerator jwtGenerator = new JwtGenerator("12345678901234567890123456789012");
+      String token = jwtGenerator.generate(profile);
+      return Results.html("index").put("token", token);
     });
 
     /**
@@ -117,13 +123,7 @@ public class App extends Jooby {
     /** One handler for logged user. */
     @SuppressWarnings("unchecked")
     Route.OneArgHandler handler = req -> {
-      // show profile or 401
-      Optional<String> profileId = req.session().get(Auth.ID).toOptional();
-      if (!profileId.isPresent()) {
-        throw new Err(Status.UNAUTHORIZED);
-      }
-      AuthStore<UserProfile> store = req.require(AuthStore.class);
-      UserProfile profile = store.get(profileId.get()).get();
+      UserProfile profile = getUserProfile(req);
 
       return Results.html("profile")
           .put("client", profile.getClass().getSimpleName().replace("Profile", ""))
@@ -153,6 +153,18 @@ public class App extends Jooby {
     get("/rest-jwt", handler);
 
     get("/direct", handler);
+
+    get("/generate-token", handler);
+  }
+
+  private UserProfile getUserProfile(final Request req) throws Exception {
+    // show profile or 401
+    Optional<String> profileId = req.session().get(Auth.ID).toOptional();
+    if (!profileId.isPresent()) {
+      throw new Err(Status.UNAUTHORIZED);
+    }
+    AuthStore<UserProfile> store = req.require(AuthStore.class);
+    return store.get(profileId.get()).get();
   }
 
   public static void main(final String[] args) throws Exception {

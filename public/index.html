@@ -1,19 +1,24 @@
 {{#partial "main"}}
 <ul>
   <li><a href="{{contextPath}}/profile">view profile (require authentication)</a></li>
-  {{#if profile}}<li><a href="{{contextPath}}/rest-jwt?token={{token}}">JWT Token</a></li>{{/if}}
+  <li><a href="{{contextPath}}/generate-token">Generate token</a>: {{token}}</li>
 </ul>
 {{#unless loggedIn}}
 <h2>Authenticate with</h2>
+UI authentication:
 <ul>
   <li><a href="{{contextPath}}/facebook">Facebook (use a real account)</a></li>
   <li><a href="{{contextPath}}/twitter">Twitter (use a real account)</a></li>
   <li><a href="{{contextPath}}/form">Form (use login = pwd)</a></li>
   <li><a href="{{contextPath}}/basic">Basic Auth (use login = pwd)</a></li>
   <li><a href="{{contextPath}}/cas">CAS (use login = pwd)</a></li>
-  <li><a href="{{contextPath}}/saml2">SAML (use a real account)</a></li>
+  <li><a href="{{contextPath}}/saml2">SAML (use testpac4j at gmail.com / Pac4jtest)</a></li>
   <li><a href="{{contextPath}}/oidc">OpenID Connect (use a real account)</a></li>
   <li><a href="{{contextPath}}/strava">Strava (use a real account)</a></li>
+</ul>
+Web service authentication:
+<ul>
+  <li><a href="{{contextPath}}/rest-jwt">JWT Token (add the token as get parameter ?token=<i>generated_token</i>)</a></li>
 </ul>
 {{/unless}}
 <h2>Protected URLs</h2>
