@@ -3,6 +3,7 @@ package org.pac4j.demo.jooby;
 import java.io.File;
 import java.util.Optional;
 
+import com.typesafe.config.Config;
 import org.jooby.*;
 import org.jooby.hbs.Hbs;
 import org.jooby.pac4j.Auth;
@@ -42,8 +43,8 @@ public class App extends Jooby {
     // generate token
     get("/generate-token", req -> {
       UserProfile profile = getUserProfile(req);
-      // TODO: how can I access the config here?
-      JwtGenerator jwtGenerator = new JwtGenerator("12345678901234567890123456789012");
+      Config config = req.require(Config.class);
+      JwtGenerator jwtGenerator = new JwtGenerator(config.getString("jwt.salt"));
       String token = jwtGenerator.generate(profile);
       return Results.html("index").put("token", token);
     });
