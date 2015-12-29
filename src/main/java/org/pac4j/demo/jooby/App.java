@@ -1,14 +1,19 @@
 package org.pac4j.demo.jooby;
 
 import java.io.File;
-import java.util.Optional;
 
-import com.typesafe.config.Config;
-import org.jooby.*;
+import org.jooby.Err;
+import org.jooby.Jooby;
+import org.jooby.Request;
+import org.jooby.Results;
+import org.jooby.Route;
+import org.jooby.Status;
 import org.jooby.hbs.Hbs;
 import org.jooby.pac4j.Auth;
 import org.jooby.pac4j.AuthStore;
 import org.pac4j.cas.client.CasClient;
+import org.pac4j.core.client.DirectClient;
+import org.pac4j.core.client.IndirectClient;
 import org.pac4j.core.profile.UserProfile;
 import org.pac4j.http.client.direct.DirectBasicAuthClient;
 import org.pac4j.http.client.direct.ParameterClient;
@@ -23,6 +28,9 @@ import org.pac4j.oidc.client.OidcClient;
 import org.pac4j.saml.client.SAML2Client;
 import org.pac4j.saml.client.SAML2ClientConfiguration;
 
+import com.typesafe.config.Config;
+
+@SuppressWarnings({"unchecked", "rawtypes" })
 public class App extends Jooby {
 
   {
@@ -75,11 +83,10 @@ public class App extends Jooby {
               new File("target", "sp-metadata.xml").getAbsolutePath());
           return new SAML2Client(cfg);
         })
-        /** Facebook. */
-        .client("/facebook/**", conf -> {
+        /** Facebook and Twitter client on same URL. */
+        .client("/twitter/**", conf -> {
           return new FacebookClient(conf.getString("fb.key"), conf.getString("fb.secret"));
         })
-        /** Twitter. */
         .client("/twitter/**", conf -> {
           return new TwitterClient(conf.getString("twitter.key"), conf.getString("twitter.secret"));
         })
@@ -93,7 +100,7 @@ public class App extends Jooby {
           client.setCasLoginUrl(conf.getString("cas.loginURL"));
           return client;
         })
-        /** Strave. */
+        /** Strava. */
         .client("/strava/**", conf -> {
           final StravaClient client = new StravaClient();
           client.setApprovalPrompt(conf.getString("strava.approvalPrompt"));
@@ -112,7 +119,7 @@ public class App extends Jooby {
         })
         .client("/direct/**",
             new DirectBasicAuthClient(new SimpleTestUsernamePasswordAuthenticator()))
-        .authorizer("admin", "/form/admin/**", (ctx, profile) -> {
+        .authorizer("jle", "/form/admin/**", (ctx, profile) -> {
           if (!(profile instanceof HttpProfile)) {
             return false;
           }
@@ -122,7 +129,6 @@ public class App extends Jooby {
         }));
 
     /** One handler for logged user. */
-    @SuppressWarnings("unchecked")
     Route.OneArgHandler handler = req -> {
       UserProfile profile = getUserProfile(req);
 
@@ -158,14 +164,27 @@ public class App extends Jooby {
     get("/generate-token", handler);
   }
 
+  /**
+   * Get an {@link UserProfile} or produces a <code>401</code>. Profile ID will be present in:
+   * <ul>
+   * <li>REQUEST: for {@link DirectClient} likes JWT, Basic, etc...</li>
+   * <li>SESSION: for {@link IndirectClient} or clients who needs a <code>callback</code></li>
+   * </ul>
+   *
+   * @param req Current request.
+   * @return A {@link UserProfile}.
+   * @throws Exception When something goes wrong.
+   */
   private UserProfile getUserProfile(final Request req) throws Exception {
+    // direct vs indirect clients
+    String profileId = req.<String> get(Auth.ID)
+        .orElseGet(() -> req.session().get(Auth.ID).value(null));
     // show profile or 401
-    Optional<String> profileId = req.session().get(Auth.ID).toOptional();
-    if (!profileId.isPresent()) {
+    if (profileId == null) {
       throw new Err(Status.UNAUTHORIZED);
     }
     AuthStore<UserProfile> store = req.require(AuthStore.class);
-    return store.get(profileId.get()).get();
+    return store.get(profileId).get();
   }
 
   public static void main(final String[] args) throws Exception {
