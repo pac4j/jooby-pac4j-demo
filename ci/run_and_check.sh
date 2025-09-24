@@ -10,10 +10,6 @@ echo "🚀 Starting jooby-pac4j-demo..."
 # Go to project directory (one level up from ci/)
 cd ..
 
-# Set Java 8 environment 
-export JAVA_HOME=/Library/Java/JavaVirtualMachines/jdk1.8.0_131.jdk/Contents/Home
-export PATH=$JAVA_HOME/bin:$PATH
-
 # Clean and compile project
 echo "📦 Compiling project..."
 mvn clean package -q
