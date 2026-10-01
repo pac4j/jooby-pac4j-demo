@@ -55,3 +55,6 @@ local.conf
 pom.xml.versionsBackup
 .idea
 *.iml
+
+# Jooby temporary directory
+tmp

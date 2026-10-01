@@ -2,13 +2,40 @@
   <img src="https://pac4j.github.io/pac4j/img/logo-jooby.png" width="300" />
 </p>
 
-**Warning**: this demo uses the deprecated `jooby-pac4j` module. See the new demo: [https://github.com/jooby-project/pac4j-starter](https://github.com/jooby-project/pac4j-starter) based on the new module: `jooby-pac4j2`.
+> This demo secures a Jooby application with **[jooby-pac4j](https://jooby.io/modules/pac4j)**, the Jooby implementation of **[pac4j](https://github.com/pac4j/pac4j)**, the security engine for Java.
+> If it is useful to you, please ⭐ **[star pac4j on GitHub](https://github.com/pac4j/pac4j)**: it helps other developers discover it!
 
-This ```jooby-pac4j-demo``` project is a Java web application to test the [jooby-pac4j](http://jooby.org/doc/pac4j) security library with various authentication mechanisms: Facebook, Twitter, form, basic auth, CAS, SAML, OpenID Connect, JWT...
+A minimal Jooby (Netty) demo showcasing authentication with jooby-pac4j and pac4j:
+- Form login (FormClient)
+- Indirect Basic Auth (IndirectBasicAuthClient)
+- CAS (CasClient)
 
-## Start & test
+It uses Jooby v4.x (`jooby-pac4j`) and pac4j v6.x.
 
-Build the project and launch the web app with [Jooby](http://jooby.org) on [http://localhost:8080](http://localhost:8080):
+## Prerequisites
+- JDK 21+
+- Maven 3.8+
+- curl (for the CAS test script)
 
-    cd jooby-pac4j-demo
-    mvn jooby:run
+## Build
+```bash
+mvn -q clean package
+```
+
+## Run
+- Quick launcher (builds and starts the demo):
+```bash
+./run.sh
+```
+- Or run the fat JAR directly:
+```bash
+java -jar target/jooby-pac4j-demo-*.jar
+```
+The server starts on http://localhost:8080
+
+## Endpoints
+- / — Home page with links
+- /form/index — Protected by FormClient (use username = password)
+- /basicauth/index — Protected by Indirect Basic Auth (use username = password)
+- /cas/index — Protected by CAS (redirects to the demo CAS server)
+- /logout — Local logout via pac4j

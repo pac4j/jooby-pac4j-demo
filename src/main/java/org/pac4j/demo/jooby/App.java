@@ -1,193 +1,76 @@
 package org.pac4j.demo.jooby;
 
-import java.io.File;
-
-import org.jooby.Err;
-import org.jooby.Jooby;
-import org.jooby.Request;
-import org.jooby.Results;
-import org.jooby.Route;
-import org.jooby.Status;
-import org.jooby.hbs.Hbs;
-import org.jooby.pac4j.Auth;
-import org.jooby.pac4j.AuthStore;
+import io.jooby.Context;
+import io.jooby.Cookie;
+import io.jooby.Jooby;
+import io.jooby.MediaType;
+import io.jooby.SessionStore;
+import io.jooby.pac4j.Pac4jModule;
 import org.pac4j.cas.client.CasClient;
-import org.pac4j.core.client.DirectClient;
-import org.pac4j.core.client.IndirectClient;
+import org.pac4j.cas.config.CasConfiguration;
+import org.pac4j.core.http.url.DefaultUrlResolver;
 import org.pac4j.core.profile.UserProfile;
-import org.pac4j.http.client.direct.DirectBasicAuthClient;
-import org.pac4j.http.client.direct.ParameterClient;
+import org.pac4j.http.client.indirect.FormClient;
+import org.pac4j.http.client.indirect.IndirectBasicAuthClient;
 import org.pac4j.http.credentials.authenticator.test.SimpleTestUsernamePasswordAuthenticator;
-import org.pac4j.http.profile.HttpProfile;
-import org.pac4j.jwt.credentials.authenticator.JwtAuthenticator;
-import org.pac4j.jwt.profile.JwtGenerator;
-import org.pac4j.oauth.client.FacebookClient;
-import org.pac4j.oauth.client.StravaClient;
-import org.pac4j.oauth.client.TwitterClient;
-import org.pac4j.oidc.client.OidcClient;
-import org.pac4j.saml.client.SAML2Client;
-import org.pac4j.saml.client.SAML2ClientConfiguration;
 
-import com.typesafe.config.Config;
-
-@SuppressWarnings({"unchecked", "rawtypes" })
 public class App extends Jooby {
 
-  {
+    {
+        // pac4j stores the user profile in the web session
+        setSessionStore(SessionStore.memory(Cookie.session("jooby.sid")));
 
-    /** Template engine (just to do a better UI). */
-    use(new Hbs());
+        // Not protected
+        get("/", ctx -> html(ctx, "<h1>Jooby pac4j Demo</h1>"
+                + "<ul>"
+                + "<li><a href=\"/form/index\">Protected by FormClient</a> (use login = password)</li>"
+                + "<li><a href=\"/basicauth/index\">Protected by Indirect Basic Auth</a> (use login = password)</li>"
+                + "<li><a href=\"/cas/index\">Protected by CAS</a> (use CAS test account)</li>"
+                + "<li><a href=\"/logout\">Logout</a></li>"
+                + "</ul>"
+                + "<p>Profile: " + ctx.getUser() + "</p>"));
 
-    get("*", (req, rsp) -> {
-      boolean loggedIn = req.session().get(Auth.ID).toOptional().isPresent();
-      req.set("loggedIn", loggedIn);
-    });
+        get("/loginForm", ctx -> html(ctx, "<h2>Login Form (FormClient)</h2>"
+                + "<form method=\"post\" action=\"/callback?client_name=FormClient\">"
+                + "<input type=\"text\" name=\"username\" placeholder=\"username\"/>"
+                + "<br/><input type=\"password\" name=\"password\" placeholder=\"password\"/>"
+                + "<br/><input type=\"submit\" value=\"Login\"/>"
+                + "</form>"
+                + "<p><a href=\"/\">Home</a></p>"));
 
-    /** Home page. */
-    get("/", req -> {
-      return Results.html("index");
-    });
+        // pac4j: callback (/callback) and logout (/logout) endpoints are added by the module,
+        // the routes defined after it are protected according to their path
+        final var authenticator = new SimpleTestUsernamePasswordAuthenticator();
+        install(new Pac4jModule()
+                .client("/form/*", conf -> new FormClient("/loginForm", authenticator))
+                .client("/basicauth/*", conf -> new IndirectBasicAuthClient(authenticator))
+                .client("/cas/*", conf -> {
+                    final var casClient = new CasClient(new CasConfiguration("https://www.casserverpac4j.dev/login"));
+                    // the default Jooby URL resolver would rewrite the CAS server URL with the local host
+                    casClient.setUrlResolver(new DefaultUrlResolver(true));
+                    return casClient;
+                }));
 
-    // generate token
-    get("/generate-token", req -> {
-      UserProfile profile = getUserProfile(req);
-      Config config = req.require(Config.class);
-      JwtGenerator jwtGenerator = new JwtGenerator(config.getString("jwt.salt"));
-      String token = jwtGenerator.generate(profile);
-      return Results.html("index").put("token", token);
-    });
-
-    /**
-     * Configure all the pac4j clients
-     */
-    use(new Auth()
-        /** OpenID Connect . */
-        .client("/oidc/**", conf -> {
-          OidcClient oidcClient = new OidcClient();
-          oidcClient.setClientID(conf.getString("oidc.clientID"));
-          oidcClient.setSecret(conf.getString("oidc.secret"));
-          oidcClient.setDiscoveryURI(conf.getString("oidc.discoveryURI"));
-          oidcClient.addCustomParam("prompt", "consent");
-          return oidcClient;
-        })
-        /** Saml. */
-        .client("/saml2/**", conf -> {
-          final SAML2ClientConfiguration cfg = new SAML2ClientConfiguration(
-              conf.getString("saml.keystore"),
-              conf.getString("saml.keystorePass"),
-              conf.getString("saml.privateKeyPass"),
-              conf.getString("saml.identityProviderMetadataPath"));
-          cfg.setMaximumAuthenticationLifetime(3600);
-          cfg.setServiceProviderEntityId(conf.getString("saml.serviceProviderEntityID"));
-          cfg.setServiceProviderMetadataPath(
-              new File("target", "sp-metadata.xml").getAbsolutePath());
-          return new SAML2Client(cfg);
-        })
-        /** Facebook and Twitter client on same URL. */
-        .client("/twitter/**", conf -> {
-          return new FacebookClient(conf.getString("fb.key"), conf.getString("fb.secret"));
-        })
-        .client("/twitter/**", conf -> {
-          return new TwitterClient(conf.getString("twitter.key"), conf.getString("twitter.secret"));
-        })
-        /** Form. */
-        .form("/form/**")
-        /** Basic. */
-        .basic("/basic/**")
-        /** CAS. */
-        .client("/cas/**", conf -> {
-          final CasClient client = new CasClient();
-          client.setCasLoginUrl(conf.getString("cas.loginURL"));
-          return client;
-        })
-        /** Strava. */
-        .client("/strava/**", conf -> {
-          final StravaClient client = new StravaClient();
-          client.setApprovalPrompt(conf.getString("strava.approvalPrompt"));
-          client.setKey(conf.getString("strava.key"));
-          client.setSecret(conf.getString("strava.secret"));
-          client.setScope(conf.getString("strava.scope"));
-          return client;
-        })
-        /** REST authent with JWT for a token passed in the url as the token parameter. */
-        .client("/rest-jwt/**", conf -> {
-          ParameterClient client = new ParameterClient("token",
-              new JwtAuthenticator(conf.getString("jwt.salt")));
-          client.setSupportGetRequest(true);
-          client.setSupportPostRequest(false);
-          return client;
-        })
-        .client("/direct/**",
-            new DirectBasicAuthClient(new SimpleTestUsernamePasswordAuthenticator()))
-        .authorizer("jle", "/form/admin/**", (ctx, profile) -> {
-          if (!(profile instanceof HttpProfile)) {
-            return false;
-          }
-          final HttpProfile httpProfile = (HttpProfile) profile;
-          final String username = httpProfile.getUsername();
-          return username.startsWith("jle");
-        }));
-
-    /** One handler for logged user. */
-    Route.OneArgHandler handler = req -> {
-      UserProfile profile = getUserProfile(req);
-
-      return Results.html("profile")
-          .put("client", profile.getClass().getSimpleName().replace("Profile", ""))
-          .put("profile", profile);
-    };
-
-    get("/profile", handler);
-
-    get("/oidc", handler);
-
-    get("/saml2", handler);
-
-    get("/facebook", handler);
-
-    get("/twitter", handler);
-
-    get("/form", handler);
-
-    get("/form/admin", handler);
-
-    get("/basic", handler);
-
-    get("/cas", handler);
-
-    get("/strava", handler);
-
-    get("/rest-jwt", handler);
-
-    get("/direct", handler);
-
-    get("/generate-token", handler);
-  }
-
-  /**
-   * Get an {@link UserProfile} or produces a <code>401</code>. Profile ID will be present in:
-   * <ul>
-   * <li>REQUEST: for {@link DirectClient} likes JWT, Basic, etc...</li>
-   * <li>SESSION: for {@link IndirectClient} or clients who needs a <code>callback</code></li>
-   * </ul>
-   *
-   * @param req Current request.
-   * @return A {@link UserProfile}.
-   * @throws Exception When something goes wrong.
-   */
-  private UserProfile getUserProfile(final Request req) throws Exception {
-    // direct vs indirect clients
-    String profileId = req.<String> get(Auth.ID)
-        .orElseGet(() -> req.session().get(Auth.ID).value(null));
-    // show profile or 401
-    if (profileId == null) {
-      throw new Err(Status.UNAUTHORIZED);
+        // Protected
+        get("/form/index", ctx -> protectedPage(ctx, "Form Protected"));
+        get("/basicauth/index", ctx -> protectedPage(ctx, "Indirect Basic Auth Protected"));
+        get("/cas/index", ctx -> protectedPage(ctx, "CAS Protected"));
     }
-    AuthStore<UserProfile> store = req.require(AuthStore.class);
-    return store.get(profileId).get();
-  }
 
-  public static void main(final String[] args) throws Exception {
-    new App().start(args);
-  }
+    private static String protectedPage(final Context ctx, final String title) {
+        final UserProfile profile = ctx.getUser();
+        return html(ctx, "<h2>" + title + "</h2>"
+                + "<p>Authenticated as: " + profile.getId() + "</p>"
+                + "<p>Profile: " + profile + "</p>"
+                + "<p><a href=\"/\">Home</a> | <a href=\"/logout\">Logout</a></p>");
+    }
+
+    private static String html(final Context ctx, final String body) {
+        ctx.setResponseType(MediaType.html);
+        return "<html><head><title>Jooby pac4j Demo</title></head><body>" + body + "</body></html>";
+    }
+
+    public static void main(final String[] args) {
+        runApp(args, App::new);
+    }
 }

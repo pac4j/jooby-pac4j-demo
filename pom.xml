@@ -1,123 +1,97 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
-
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <parent>
-    <groupId>org.jooby</groupId>
-    <artifactId>jooby-project</artifactId>
-    <version>0.13.0</version>
-  </parent>
-
-  <artifactId>jooby-pac4j-demo</artifactId>
   <groupId>org.pac4j.demo</groupId>
+  <artifactId>jooby-pac4j-demo</artifactId>
+  <version>4.0.0-SNAPSHOT</version>
   <name>jooby-pac4j-demo</name>
+  <description>Demo Jooby app using jooby-pac4j with Form login, Basic Auth and CAS</description>
 
   <properties>
-    <jooby.version>0.13.0</jooby.version>
-
-    <!-- Startup class -->
-    <application.class>org.pac4j.demo.jooby.App</application.class>
+    <maven.compiler.release>21</maven.compiler.release>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <jooby.version>4.5.4</jooby.version>
+    <pac4j.version>6.5.9</pac4j.version>
   </properties>
 
   <dependencies>
     <!-- Jooby -->
     <dependency>
-      <groupId>org.jooby</groupId>
-      <artifactId>jooby-hbs</artifactId>
+      <groupId>io.jooby</groupId>
+      <artifactId>jooby-netty</artifactId>
+      <version>${jooby.version}</version>
     </dependency>
-
     <dependency>
-      <groupId>org.jooby</groupId>
+      <groupId>io.jooby</groupId>
       <artifactId>jooby-pac4j</artifactId>
+      <version>${jooby.version}</version>
     </dependency>
 
+    <!-- pac4j clients -->
     <dependency>
       <groupId>org.pac4j</groupId>
-      <artifactId>pac4j-oauth</artifactId>
-    </dependency>
-
-    <dependency>
-      <groupId>org.pac4j</groupId>
-      <artifactId>pac4j-oidc</artifactId>
+      <artifactId>pac4j-core</artifactId>
       <version>${pac4j.version}</version>
     </dependency>
-
     <dependency>
       <groupId>org.pac4j</groupId>
-      <artifactId>pac4j-saml</artifactId>
+      <artifactId>pac4j-http</artifactId>
       <version>${pac4j.version}</version>
     </dependency>
-
     <dependency>
       <groupId>org.pac4j</groupId>
       <artifactId>pac4j-cas</artifactId>
       <version>${pac4j.version}</version>
     </dependency>
 
-    <dependency>
-      <groupId>org.pac4j</groupId>
-      <artifactId>pac4j-jwt</artifactId>
-      <version>${pac4j.version}</version>
-    </dependency>
-
-    <dependency>
-      <groupId>org.pac4j</groupId>
-      <artifactId>pac4j-ldap</artifactId>
-      <version>${pac4j.version}</version>
-    </dependency>
-
-    <dependency>
-      <groupId>org.pac4j</groupId>
-      <artifactId>pac4j-sql</artifactId>
-      <version>${pac4j.version}</version>
-    </dependency>
-
-    <dependency>
-      <groupId>org.pac4j</groupId>
-      <artifactId>pac4j-mongo</artifactId>
-      <version>${pac4j.version}</version>
-    </dependency>
-
-    <dependency>
-      <groupId>org.pac4j</groupId>
-      <artifactId>pac4j-stormpath</artifactId>
-      <version>${pac4j.version}</version>
-    </dependency>
-
-    <!-- Server -->
-    <dependency>
-      <groupId>org.jooby</groupId>
-      <artifactId>jooby-netty</artifactId>
-    </dependency>
-
+    <!-- logging -->
     <dependency>
       <groupId>ch.qos.logback</groupId>
       <artifactId>logback-classic</artifactId>
+      <version>1.6.5</version>
     </dependency>
-
   </dependencies>
 
   <build>
     <plugins>
-      <!-- Build fat jar -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.16.0</version>
+      </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-shade-plugin</artifactId>
-      </plugin>
-
-      <!-- Build jooby.zip | jooby.war -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-assembly-plugin</artifactId>
-        <configuration>
-          <descriptorRefs>
-            <descriptorRef>jooby.zip</descriptorRef>
-          </descriptorRefs>
-        </configuration>
+        <version>3.6.2</version>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+            <configuration>
+              <createDependencyReducedPom>false</createDependencyReducedPom>
+              <filters>
+                <filter>
+                  <artifact>*:*</artifact>
+                  <excludes>
+                    <exclude>META-INF/*.SF</exclude>
+                    <exclude>META-INF/*.DSA</exclude>
+                    <exclude>META-INF/*.RSA</exclude>
+                  </excludes>
+                </filter>
+              </filters>
+              <transformers>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                  <mainClass>org.pac4j.demo.jooby.App</mainClass>
+                </transformer>
+              </transformers>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>
-
 </project>

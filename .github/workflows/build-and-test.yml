@@ -9,30 +9,30 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      
-    - name: Set up JDK 8
-      uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+
+    - name: Set up JDK 21
+      uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
       with:
-        java-version: '8.0.504+1'
+        java-version: '21'
         distribution: 'temurin'
-        
+
     - name: Cache Maven dependencies
       uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
       with:
         path: ~/.m2
         key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
         restore-keys: ${{ runner.os }}-m2
-        
-    - name: Run build and test
+
+    - name: Run build and CAS test
       run: |
         cd ci
         chmod +x run_and_check.sh
         ./run_and_check.sh
-        
+
     - name: Upload test logs
       if: failure()
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
